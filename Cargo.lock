@@ -33,6 +33,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "doc-comment"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
+
+[[package]]
 name = "futures"
 version = "0.1.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -215,6 +221,7 @@ dependencies = [
  "mogwai",
  "serde",
  "serde_json",
+ "snafu",
  "wasm-bindgen",
  "wasm-bindgen-test",
  "web-sys",
@@ -351,6 +358,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
 
 [[package]]
+name = "snafu"
+version = "0.6.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c4e6046e4691afe918fd1b603fd6e515bcda5388a1092a9edbada307d159f09"
+dependencies = [
+ "doc-comment",
+ "snafu-derive",
+]
+
+[[package]]
+name = "snafu-derive"
+version = "0.6.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7073448732a89f2f3e6581989106067f403d378faeafb4a50812eb814170d3e5"
+dependencies = [
+ "proc-macro2 1.0.21",
+ "quote 1.0.7",
+ "syn",
+]
+
+[[package]]
 name = "syn"
 version = "1.0.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -390,6 +418,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ac64ead5ea5f05873d7c12b545865ca2b8d28adfc50a49b84770a3a97265d42"
 dependencies = [
  "cfg-if",
+ "serde",
+ "serde_json",
  "wasm-bindgen-macro",
 ]
 

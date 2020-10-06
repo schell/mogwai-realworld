@@ -79,9 +79,9 @@ impl From<&Route> for ViewBuilder<HtmlElement> {
             Route::Home => page::home().into(),
             Route::LoginOrRegister => page::login_register().into(),
             Route::Settings => page::settings().into(),
-            Route::Editor{ o_slug: _ } => page::editor().into(),
-            Route::Article{ slug } => page::article().into(),
-            _ => todo!(),
+            Route::Editor{ o_slug } => page::editor(o_slug).into(),
+            Route::Article{ slug } => page::article(slug).into(),
+            Route::Profile{ username, is_favorites } => page::profile(username, *is_favorites).into(),
         }
     }
 }
@@ -90,6 +90,37 @@ impl From<&Route> for ViewBuilder<HtmlElement> {
 impl From<&Route> for View<HtmlElement> {
     fn from(route: &Route) -> Self {
         ViewBuilder::from(route).into()
+    }
+}
+
+
+impl Route {
+    pub fn nav_home_class(&self) -> String {
+        match self {
+            Route::Home => "nav-link active",
+            _ => "nav-link"
+        }.to_string()
+    }
+
+    pub fn nav_editor_class(&self) -> String {
+        match self {
+            Route::Editor{..} => "nav-link active",
+            _ => "nav-link"
+        }.to_string()
+    }
+
+    pub fn nav_settings_class(&self) -> String {
+        match self {
+            Route::Settings{..} => "nav-link active",
+            _ => "nav-link"
+        }.to_string()
+    }
+
+    pub fn nav_register_class(&self) -> String {
+        match self {
+            Route::LoginOrRegister => "nav-link active",
+            _ => "nav-link"
+        }.to_string()
     }
 }
 

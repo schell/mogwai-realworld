@@ -24,6 +24,7 @@ impl Default for Nav {
 
 #[derive(Clone)]
 pub enum NavModel {
+    Startup,
     HashChange { route: Route },
 }
 
@@ -39,9 +40,15 @@ impl Component for Nav {
 
     fn update(&mut self, msg: &NavModel, tx: &Transmitter<NavView>, _sub: &Subscriber<NavModel>) {
         match msg {
-            NavModel::HashChange { route } => tx.send(&NavView {
-                route: route.clone(),
-            }),
+            NavModel::Startup => {
+                mogwai::utils::document().set_title(&self.current_route.as_title());
+            }
+            NavModel::HashChange { route } => {
+                mogwai::utils::document().set_title(&route.as_title());
+                tx.send(&NavView {
+                    route: route.clone(),
+                });
+            }
         }
     }
 

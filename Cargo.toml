@@ -40,13 +40,15 @@ path = "../mogwai/mogwai"
 version = "0.3"
 # Add more web-sys API's as you need them
 features = [
-  "HtmlInputElement",
+  "Headers",
   "HashChangeEvent",
+  "HtmlInputElement",
   "Location",
   "Request",
   "RequestInit",
   "RequestMode",
   "Response",
+  "Storage",
 ]
 
 [dev-dependencies]

@@ -5,12 +5,17 @@ use std::panic;
 use wasm_bindgen::prelude::*;
 
 mod api;
+mod components;
 mod page;
 mod route;
-mod components;
+mod store;
 
+use components::{
+    login::Login,
+    nav::{Nav, NavModel},
+    register::Register,
+};
 use route::*;
-use components::nav::Nav;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -18,13 +23,20 @@ use components::nav::Nav;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
+pub enum Page {
+    Login(Gizmo<Login>),
+    Register(Gizmo<Register>),
+}
+
 struct App {
     nav: Gizmo<Nav>,
 }
 
 impl Default for App {
     fn default() -> App {
-        App { nav: Gizmo::from(Nav::default()) }
+        let nav = Gizmo::from(Nav::default());
+        nav.send(&NavModel::Startup);
+        App { nav }
     }
 }
 
@@ -48,7 +60,9 @@ impl Component for App {
 
     fn bind(&self, sub: &Subscriber<AppModel>) {
         // bind the nav's output view messages to our input model messages
-        sub.subscribe_map(&self.nav.recv, |msg| AppModel::HashChange{ route: msg.route.clone() });
+        sub.subscribe_map(&self.nav.recv, |msg| AppModel::HashChange {
+            route: msg.route.clone(),
+        });
     }
 
     fn update(&mut self, msg: &AppModel, tx: &Transmitter<AppView>, _sub: &Subscriber<AppModel>) {

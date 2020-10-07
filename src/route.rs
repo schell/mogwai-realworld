@@ -1,13 +1,16 @@
-use mogwai::prelude::*;
 use log::trace;
+use mogwai::prelude::*;
 
-use super::page as page;
-
+use crate::{
+    components::{login::Login, register::Register},
+    page,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Route {
     Home,
-    LoginOrRegister,
+    Login,
+    Register,
     Settings,
     Editor {
         o_slug: Option<String>,
@@ -20,7 +23,6 @@ pub enum Route {
         is_favorites: bool,
     },
 }
-
 
 impl TryFrom<&str> for Route {
     type Error = String;
@@ -40,8 +42,8 @@ impl TryFrom<&str> for Route {
         match paths.as_slice() {
             [""] => Ok(Route::Home),
             ["", ""] => Ok(Route::Home),
-            ["", "login"] => Ok(Route::LoginOrRegister),
-            ["", "register"] => Ok(Route::LoginOrRegister),
+            ["", "login"] => Ok(Route::Login),
+            ["", "register"] => Ok(Route::Register),
             ["", "settings"] => Ok(Route::Settings),
             ["", "editor"] => Ok(Route::Editor { o_slug: None }),
             ["", "editor", slug] => Ok(Route::Editor {
@@ -63,7 +65,6 @@ impl TryFrom<&str> for Route {
     }
 }
 
-
 impl TryFrom<String> for Route {
     type Error = String;
 
@@ -72,20 +73,25 @@ impl TryFrom<String> for Route {
     }
 }
 
-
 impl From<&Route> for ViewBuilder<HtmlElement> {
     fn from(route: &Route) -> Self {
         match route {
             Route::Home => page::home().into(),
-            Route::LoginOrRegister => page::login_register().into(),
+            Route::Login => Gizmo::from(Login::default()).view_builder(),
+            Route::Register => {
+                let register = Gizmo::from(Register::default());
+                register.view_builder()
+            }
             Route::Settings => page::settings().into(),
-            Route::Editor{ o_slug } => page::editor(o_slug).into(),
-            Route::Article{ slug } => page::article(slug).into(),
-            Route::Profile{ username, is_favorites } => page::profile(username, *is_favorites).into(),
+            Route::Editor { o_slug } => page::editor(o_slug).into(),
+            Route::Article { slug } => page::article(slug).into(),
+            Route::Profile {
+                username,
+                is_favorites,
+            } => page::profile(username, *is_favorites).into(),
         }
     }
 }
-
 
 impl From<&Route> for View<HtmlElement> {
     fn from(route: &Route) -> Self {
@@ -93,37 +99,86 @@ impl From<&Route> for View<HtmlElement> {
     }
 }
 
-
 impl Route {
     pub fn nav_home_class(&self) -> String {
         match self {
             Route::Home => "nav-link active",
-            _ => "nav-link"
-        }.to_string()
+            _ => "nav-link",
+        }
+        .to_string()
     }
 
     pub fn nav_editor_class(&self) -> String {
         match self {
-            Route::Editor{..} => "nav-link active",
-            _ => "nav-link"
-        }.to_string()
+            Route::Editor { .. } => "nav-link active",
+            _ => "nav-link",
+        }
+        .to_string()
     }
 
     pub fn nav_settings_class(&self) -> String {
         match self {
-            Route::Settings{..} => "nav-link active",
-            _ => "nav-link"
-        }.to_string()
+            Route::Settings { .. } => "nav-link active",
+            _ => "nav-link",
+        }
+        .to_string()
     }
 
     pub fn nav_register_class(&self) -> String {
         match self {
-            Route::LoginOrRegister => "nav-link active",
-            _ => "nav-link"
-        }.to_string()
+            Route::Register => "nav-link active",
+            _ => "nav-link",
+        }
+        .to_string()
+    }
+
+    pub fn nav_login_class(&self) -> String {
+        match self {
+            Route::Login => "nav-link active",
+            _ => "nav-link",
+        }
+        .to_string()
+    }
+
+    pub fn as_title(&self) -> String {
+        match self {
+            Route::Home => "Home".into(),
+            Route::Register => "Sign Up".into(),
+            Route::Login => "Sign In".into(),
+            Route::Editor { .. } => "Editor".into(),
+            Route::Settings => "Settings".into(),
+            Route::Article { .. } => "Article".into(),
+            Route::Profile { .. } => "Profile".into(),
+        }
+    }
+
+    pub fn as_hash(&self) -> String {
+        match self {
+            Route::Home => "".into(),
+            Route::Register => "register".into(),
+            Route::Login => "login".into(),
+            Route::Editor { o_slug } => {
+                if let Some(slug) = o_slug {
+                    format!("editor/{}", slug)
+                } else {
+                    "editor".into()
+                }
+            }
+            Route::Settings => "settings".into(),
+            Route::Article { slug } => format!("article/{}", slug),
+            Route::Profile {
+                username,
+                is_favorites,
+            } => {
+                if *is_favorites {
+                    format!("profile/{}/favorites", username)
+                } else {
+                    format!("profile/{}", username)
+                }
+            }
+        }
     }
 }
-
 
 #[cfg(test)]
 mod route_tests {

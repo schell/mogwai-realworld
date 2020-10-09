@@ -43,6 +43,7 @@ features = [
   "Headers",
   "HashChangeEvent",
   "HtmlInputElement",
+  "HtmlTextAreaElement",
   "Location",
   "Request",
   "RequestInit",

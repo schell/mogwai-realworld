@@ -47,6 +47,23 @@ pub mod request {
         },
     }
 
+    impl From<Error> for Vec<String> {
+        fn from(err: Error) -> Vec<String> {
+            match err {
+                Error::ResponseErrors { errors } => errors
+                    .into_iter()
+                    .flat_map(|(name, descs)| -> Vec<String> {
+                        descs
+                            .into_iter()
+                            .map(|desc| format!("{} {}", name, desc))
+                            .collect()
+                    })
+                    .collect(),
+                _ => vec![format!("{}", err)],
+            }
+        }
+    }
+
     async fn send_request<T: DeserializeOwned>(req: Request) -> Result<T, Error> {
         let resp: Response = JsFuture::from(utils::window().fetch_with_request(&req))
             .await
@@ -70,13 +87,22 @@ pub mod request {
             })
     }
 
-    fn req_init<T: Serialize>(o_body: Option<&T>) -> Result<RequestInit, Error> {
+    fn req_init<T: Serialize>(
+        o_body: Option<&T>,
+        o_auth: Option<&str>,
+    ) -> Result<RequestInit, Error> {
         let mut opts = RequestInit::new();
         let headers = Headers::new().ok().with_context(|| CantCreateHeaders)?;
         headers
             .append("Content-Type", "application/json; charset=utf-8")
             .ok()
             .with_context(|| CantAppendHeaders)?;
+        if let Some(token) = o_auth {
+            headers
+                .append("Authorization", &format!("Token {}", token))
+                .ok()
+                .with_context(|| CantAppendHeaders)?;
+        }
         opts.headers(&headers);
         opts.mode(RequestMode::Cors);
         if let Some(body) = o_body {
@@ -90,8 +116,9 @@ pub mod request {
         url: &str,
         method: &str,
         o_body: Option<&T>,
+        o_auth: Option<&str>,
     ) -> Result<S, Error> {
-        let mut opts = req_init(o_body)?;
+        let mut opts = req_init(o_body, o_auth)?;
         opts.method(method);
         opts.mode(RequestMode::Cors);
 
@@ -104,9 +131,7 @@ pub mod request {
 }
 
 /// A user.
-///
-/// {"user":{"id":118083,"email":"schell@zyghost.com","createdAt":"2020-10-06T22:42:31.921Z","updatedAt":"2020-10-06T22:42:31.928Z","username":"schell","bio":null,"image":null,"token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MTE4MDgzLCJ1c2VybmFtZSI6InNjaGVsbCIsImV4cCI6MTYwNzIwODE1MX0.EgesXVrJkTTd53KCzqldEBWV1X_-PZKcA0zcn9ZlG7U"}}
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct User {
     pub email: String,
     pub token: String,
@@ -115,19 +140,12 @@ pub struct User {
     pub image: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
-struct UserWrapper {
-    user: User,
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct UserWrapper<T> {
+    user: T,
 }
 
-/// POST /api/users/login
-pub async fn auth_user(user: UserRegistration) -> Result<User, request::Error> {
-    let url = format!("{}/users/login", API_URL);
-    let UserWrapper { user } =
-        request::api(&url, "POST", Some(&UserRegistrationWrapper { user })).await?;
-    Ok(user)
-}
-
+/// A user's registration or login.
 #[derive(Clone, Debug, Serialize)]
 pub struct UserRegistration {
     pub email: Option<String>,
@@ -135,15 +153,47 @@ pub struct UserRegistration {
     pub password: Option<String>,
 }
 
-#[derive(Serialize)]
-struct UserRegistrationWrapper {
-    user: UserRegistration,
+/// POST /api/users/login
+pub async fn auth_user(user: UserRegistration) -> Result<User, request::Error> {
+    let url = format!("{}/users/login", API_URL);
+    let UserWrapper { user } =
+        request::api(&url, "POST", Some(&UserWrapper { user }), None).await?;
+    Ok(user)
 }
 
 /// POST /api/users
 pub async fn register_user(user: UserRegistration) -> Result<User, request::Error> {
     let url = format!("{}/users", API_URL);
     let UserWrapper { user } =
-        request::api(&url, "POST", Some(&UserRegistrationWrapper { user })).await?;
+        request::api(&url, "POST", Some(&UserWrapper { user }), None).await?;
+    Ok(user)
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct UserUpdate {
+    pub email: Option<String>,
+    pub username: Option<String>,
+    pub bio: Option<String>,
+    pub image: Option<String>,
+    pub password: Option<String>,
+}
+
+impl Default for UserUpdate {
+    fn default() -> Self {
+        UserUpdate {
+            email: None,
+            username: None,
+            bio: None,
+            image: None,
+            password: None,
+        }
+    }
+}
+
+/// PUT /api/user
+pub async fn update_user(user: UserUpdate, token: &str) -> Result<User, request::Error> {
+    let url = format!("{}/user", API_URL);
+    let UserWrapper { user } =
+        request::api(&url, "PUT", Some(&UserWrapper { user }), Some(token)).await?;
     Ok(user)
 }

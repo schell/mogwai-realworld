@@ -12,7 +12,7 @@ mod store;
 
 use components::{
     login::Login,
-    nav::{Nav, NavModel},
+    nav::Nav,
     register::Register,
 };
 use route::*;
@@ -35,7 +35,6 @@ struct App {
 impl Default for App {
     fn default() -> App {
         let nav = Gizmo::from(Nav::default());
-        nav.send(&NavModel::Startup);
         App { nav }
     }
 }
@@ -60,9 +59,9 @@ impl Component for App {
 
     fn bind(&self, sub: &Subscriber<AppModel>) {
         // bind the nav's output view messages to our input model messages
-        sub.subscribe_map(&self.nav.recv, |msg| AppModel::HashChange {
-            route: msg.route.clone(),
-        });
+        sub.subscribe_filter_map(&self.nav.recv, |msg| msg.route().map(|r| AppModel::HashChange {
+            route: r.clone()
+        }));
     }
 
     fn update(&mut self, msg: &AppModel, tx: &Transmitter<AppView>, _sub: &Subscriber<AppModel>) {

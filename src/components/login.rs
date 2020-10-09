@@ -1,7 +1,7 @@
 //! The login component.
 #![allow(unused_braces)]
 use mogwai::prelude::*;
-use web_sys::Location;
+use web_sys::{HtmlInputElement, Location};
 
 use crate::{
     api::{self, User, UserRegistration},
@@ -87,25 +87,11 @@ impl Component for Login {
                 sub.send_async(async {
                     match api::auth_user(registration).await {
                         Ok(user) => In::LoginSuccess { user },
-                        Err(err) => {
-                            let errors = match err {
-                                api::request::Error::ResponseErrors { errors } => errors
-                                    .into_iter()
-                                    .flat_map(|(name, descs)| -> Vec<String> {
-                                        descs
-                                            .into_iter()
-                                            .map(|desc| format!("{} {}", name, desc))
-                                            .collect()
-                                    })
-                                    .collect(),
-                                _ => vec![format!("{}", err)],
-                            };
-                            In::LoginFailure { errors }
-                        }
+                        Err(err) => In::LoginFailure { errors: Vec::from(err) },
                     }
                 });
             }
-            In::LoginSuccess { user } => match store::write_item("user", user) {
+            In::LoginSuccess { user } => match store::write_user(user) {
                 Ok(()) => {
                     let location: Location = mogwai::utils::window().location();
                     let _ = location.set_hash(&Route::Home.as_hash());
@@ -149,6 +135,7 @@ impl Component for Login {
                             <form>
                                 <fieldset class="form-group">
                                     <input
+                                        cast:type = HtmlInputElement
                                         class="form-control form-control-lg"
                                         type="text"
                                         placeholder="Email"
@@ -159,6 +146,7 @@ impl Component for Login {
                                 </fieldset>
                                 <fieldset class="form-group">
                                     <input
+                                        cast:type = HtmlInputElement
                                         class="form-control form-control-lg"
                                         type="password"
                                         placeholder="Password"

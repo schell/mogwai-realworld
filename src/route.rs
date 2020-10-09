@@ -2,7 +2,7 @@ use log::trace;
 use mogwai::prelude::*;
 
 use crate::{
-    components::{login::Login, register::Register},
+    components::{login::Login, register::Register, settings::Settings},
     page,
 };
 
@@ -82,7 +82,7 @@ impl From<&Route> for ViewBuilder<HtmlElement> {
                 let register = Gizmo::from(Register::default());
                 register.view_builder()
             }
-            Route::Settings => page::settings().into(),
+            Route::Settings => Gizmo::from(Settings::default()).view_builder(),
             Route::Editor { o_slug } => page::editor(o_slug).into(),
             Route::Article { slug } => page::article(slug).into(),
             Route::Profile {
@@ -140,6 +140,14 @@ impl Route {
         .to_string()
     }
 
+    pub fn nav_profile_class(&self) -> String {
+        match self {
+            Route::Profile{ .. } => "nav-link active",
+            _ => "nav-link",
+        }
+        .to_string()
+    }
+
     pub fn as_title(&self) -> String {
         match self {
             Route::Home => "Home".into(),
@@ -154,26 +162,26 @@ impl Route {
 
     pub fn as_hash(&self) -> String {
         match self {
-            Route::Home => "".into(),
-            Route::Register => "register".into(),
-            Route::Login => "login".into(),
+            Route::Home => "/".into(),
+            Route::Register => "/register".into(),
+            Route::Login => "/login".into(),
             Route::Editor { o_slug } => {
                 if let Some(slug) = o_slug {
-                    format!("editor/{}", slug)
+                    format!("/editor/{}", slug)
                 } else {
-                    "editor".into()
+                    "/editor".into()
                 }
             }
-            Route::Settings => "settings".into(),
-            Route::Article { slug } => format!("article/{}", slug),
+            Route::Settings => "/settings".into(),
+            Route::Article { slug } => format!("/article/{}", slug),
             Route::Profile {
                 username,
                 is_favorites,
             } => {
                 if *is_favorites {
-                    format!("profile/{}/favorites", username)
+                    format!("/profile/{}/favorites", username)
                 } else {
-                    format!("profile/{}", username)
+                    format!("/profile/{}", username)
                 }
             }
         }

@@ -1,8 +1,5 @@
 use mogwai::prelude::*;
 
-use super::components::register::Register;
-
-
 pub fn home() -> ViewBuilder<HtmlElement> {
     builder!(
         <div class="home-page">
@@ -90,46 +87,6 @@ pub fn home() -> ViewBuilder<HtmlElement> {
     )
 }
 
-
-
-
-pub fn settings() -> ViewBuilder<HtmlElement> {
-    builder! {
-        <div class="settings-page">
-            <div class="container page">
-                <div class="row">
-                    <div class="col-md-6 offset-md-3 col-xs-12">
-                        <h1 class="text-xs-center">"Your Settings"</h1>
-                        <form>
-                            <fieldset>
-                                <fieldset class="form-group">
-                                    <input class="form-control" type="text" placeholder="URL of profile picture" />
-                                </fieldset>
-                                <fieldset class="form-group">
-                                    <input class="form-control form-control-lg" type="text" placeholder="Your Name" />
-                                </fieldset>
-                                <fieldset class="form-group">
-                                    <textarea class="form-control form-control-lg" rows="8" placeholder="Short bio about you"></textarea>
-                                </fieldset>
-                                <fieldset class="form-group">
-                                    <input class="form-control form-control-lg" type="text" placeholder="Email" />
-                                </fieldset>
-                                <fieldset class="form-group">
-                                    <input class="form-control form-control-lg" type="password" placeholder="Password" />
-                                </fieldset>
-                                <button class="btn btn-lg btn-primary pull-xs-right">
-                                    "Update Settings"
-                                </button>
-                            </fieldset>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-}
-
-
 pub fn editor(_o_slug: &Option<String>) -> ViewBuilder<HtmlElement> {
     builder! {
         <div class="editor-page">
@@ -162,7 +119,6 @@ pub fn editor(_o_slug: &Option<String>) -> ViewBuilder<HtmlElement> {
         </div>
     }
 }
-
 
 pub fn article(_slug: &str) -> ViewBuilder<HtmlElement> {
     builder! {

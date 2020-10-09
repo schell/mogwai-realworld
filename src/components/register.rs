@@ -4,7 +4,7 @@
 //! routes.
 #![allow(unused_braces)]
 use mogwai::prelude::*;
-use web_sys::Location;
+use web_sys::{HtmlInputElement, Location};
 
 use crate::{
     api::{self, User, UserRegistration},
@@ -113,7 +113,7 @@ impl Component for Register {
                     }
                 });
             }
-            In::RegistrationSuccess { user } => match store::write_item("user", user) {
+            In::RegistrationSuccess { user } => match store::write_user(user) {
                 Ok(()) => {
                     let location: Location = mogwai::utils::window().location();
                     let _ = location.set_hash(&Route::Home.as_hash());
@@ -157,6 +157,7 @@ impl Component for Register {
                             <form>
                                 <fieldset class="form-group">
                                     <input
+                                        cast:type=web_sys::HtmlInputElement
                                         class="form-control form-control-lg"
                                         type="text"
                                         placeholder="Your Name"
@@ -167,6 +168,7 @@ impl Component for Register {
                                 </fieldset>
                                 <fieldset class="form-group">
                                     <input
+                                        cast:type=web_sys::HtmlInputElement
                                         class="form-control form-control-lg"
                                         type="text"
                                         placeholder="Email"
@@ -177,6 +179,7 @@ impl Component for Register {
                                 </fieldset>
                                 <fieldset class="form-group">
                                     <input
+                                        cast:type=web_sys::HtmlInputElement
                                         class="form-control form-control-lg"
                                         type="password"
                                         placeholder="Password"

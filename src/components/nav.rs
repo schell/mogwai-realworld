@@ -53,6 +53,18 @@ fn signed_in_view_builder(
     settings_class: Effect<String>,
     profile_class: Effect<String>,
 ) -> ViewBuilder<HtmlElement> {
+    let o_image: Option<ViewBuilder<HtmlElement>> = user
+        .image
+        .as_ref()
+        .map(|image| {
+            if image.is_empty() {
+                None
+            } else {
+                Some(builder! { <img class="user-pic" src=image /> })
+            }
+        })
+        .flatten();
+
     builder! {
         <ul class="nav navbar-nav pull-xs-right">
             <li class="nav-item">
@@ -72,11 +84,11 @@ fn signed_in_view_builder(
             </li>
             <li class="nav-item">
                 <a class=profile_class href=format!("#/profile/{}", user.username)>
+                    {o_image}
                     {format!(" {}", user.username)}
                 </a>
             </li>
         </ul>
-
     }
 }
 

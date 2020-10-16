@@ -7,9 +7,11 @@ This is a work in progress. Feel free to contribute or criticize - all feedback 
 welcome :)
 
 ## getting started 
-First you'll need `rustup`, which manages versions of `rustc` and friends _. 
+First you'll need [`rustup`](https://rustup.rs/), which manages versions of `rustc` 
+and friends. 
 
-Then you'll need `wasm-pack` which uses `rustc` to cross-compile rust code to WASM _.
+Then you'll need [`wasm-pack`](https://rustwasm.github.io/docs/wasm-pack/) which 
+uses `rustc` to cross-compile rust code to WASM _.
 
 Then you'll need a simple file server. I like to use `basic-http-server`, which can 
 be installed with `cargo`:

@@ -2,7 +2,7 @@ use log::trace;
 use mogwai::prelude::*;
 
 use crate::{
-    components::{login::Login, register::Register, settings::Settings},
+    components::{login::Login, profile::Profile, register::Register, settings::Settings},
     page,
 };
 
@@ -88,7 +88,10 @@ impl From<&Route> for ViewBuilder<HtmlElement> {
             Route::Profile {
                 username,
                 is_favorites,
-            } => page::profile(username, *is_favorites).into(),
+            } => Gizmo::from(Profile {
+                username: username.to_string(),
+                is_favorites: *is_favorites,
+            }).view_builder(),
         }
     }
 }
@@ -142,7 +145,7 @@ impl Route {
 
     pub fn nav_profile_class(&self) -> String {
         match self {
-            Route::Profile{ .. } => "nav-link active",
+            Route::Profile { .. } => "nav-link active",
             _ => "nav-link",
         }
         .to_string()

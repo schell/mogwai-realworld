@@ -1,4 +1,6 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// The conduit API URL
 pub const API_URL: &'static str = "https://conduit.productionready.io/api";
@@ -196,4 +198,119 @@ pub async fn update_user(user: UserUpdate, token: &str) -> Result<User, request:
     let UserWrapper { user } =
         request::api(&url, "PUT", Some(&UserWrapper { user }), Some(token)).await?;
     Ok(user)
+}
+
+/// {
+///     "profile": {
+///         "username": "jake",
+///         "bio": "I work at statefarm",
+///         "image": "https://static.productionready.io/images/smiley-cyrus.jpg",
+///         "following": false
+///     }
+/// }
+#[derive(Clone, Deserialize)]
+pub struct UserProfile {
+    pub username: String,
+    pub bio: String,
+    pub image: String,
+    pub following: bool,
+}
+
+impl From<User> for UserProfile {
+    fn from(user: User) -> UserProfile {
+        UserProfile {
+            username: user.username,
+            bio: user.bio.unwrap_or_else(|| String::new()),
+            image: user.image.unwrap_or_else(|| String::new()),
+            following: false,
+        }
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+struct ProfileWrapper<T> {
+    profile: T,
+}
+
+/// GET /api/profiles/:username
+pub async fn get_profile(
+    username: &str,
+    o_token: Option<&str>,
+) -> Result<UserProfile, request::Error> {
+    let url = format!("{}/profiles/{}", API_URL, username);
+    let ProfileWrapper { profile } = request::api::<(), _>(&url, "GET", None, o_token).await?;
+    Ok(profile)
+}
+
+/// {
+///     "article": {
+///         "slug": "how-to-train-your-dragon",
+///         "title": "How to train your dragon",
+///         "description": "Ever wonder how?",
+///         "body": "It takes a Jacobian",
+///         "tagList": ["dragons", "training"],
+///         "createdAt": "2016-02-18T03:22:56.637Z",
+///         "updatedAt": "2016-02-18T03:48:35.824Z",
+///         "favorited": false,
+///         "favoritesCount": 0,
+///         "author": {
+///             "username": "jake",
+///             "bio": "I work at statefarm",
+///             "image": "https://i.stack.imgur.com/xHWG8.jpg",
+///             "following": false
+///         }
+///     }
+/// }
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Article {
+    pub slug: String,
+    pub title: String,
+    pub description: String,
+    pub body: String,
+    pub tag_list: Vec<String>,
+    //pub created_at: DateTime<Utc>,
+    //pub updated_at: DateTime<Utc>,
+    pub favorited: bool,
+    pub favorites_count: u32,
+    pub author: UserProfile,
+}
+
+#[cfg(test)]
+mod test_parse_date {
+    use chrono::{offset::FixedOffset, DateTime, Utc};
+
+    #[test]
+    fn parse_date_time() {
+        let s = "2016-02-18T03:48:35.824Z";
+        let dt: DateTime<FixedOffset> = todo!();
+    }
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Articles {
+    pub articles: Vec<Article>,
+    pub article_count: u32,
+}
+
+/// GET /api/articles
+pub async fn get_articles(o_author: Option<&str>, o_tag: Option<&str>, o_favorited: Option<&str>, o_limit: Option<u32>, o_offset: Option<u32>, o_token: Option<&str>) -> Result<Articles, request::Error> {
+    let params: Vec<String> = vec![
+        o_tag.map(|t| format!("tag={}", t)),
+        o_author.map(|a| format!("author={}", a)),
+        o_favorited.map(|f| format!("favorited={}", f)),
+        o_limit.map(|l| format!("limit={}", l)),
+        o_offset.map(|o| format!("offset={}", o)),
+    ]
+    .into_iter()
+    .filter_map(|x| x)
+    .collect();
+    let params = if params.is_empty() {
+        String::new()
+    } else {
+        format!("?{}", params.join("&"))
+    };
+    let url = format!("{}/articles{}", API_URL, params);
+    request::api::<(), Articles>(&url, "GET", None, o_token).await
 }

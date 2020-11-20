@@ -5,38 +5,53 @@ use crate::{
     api::{self, User, UserUpdate},
     route::Route,
     store,
+    widgets::{TextInput, TextInputIn},
 };
 
 /// The settings UI component.
 pub struct Settings {
     o_user: Option<User>,
-    o_pic_input: Option<HtmlInputElement>,
-    o_name_input: Option<HtmlInputElement>,
-    o_bio_input: Option<HtmlTextAreaElement>,
-    o_email_input: Option<HtmlInputElement>,
-    o_password_input: Option<HtmlInputElement>,
+    pic_input: Gizmo<TextInput<HtmlInputElement>>,
+    name_input: Gizmo<TextInput<HtmlInputElement>>,
+    bio_input: Gizmo<TextInput<HtmlTextAreaElement>>,
+    email_input: Gizmo<TextInput<HtmlInputElement>>,
+    password_input: Gizmo<TextInput<HtmlInputElement>>,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings {
-            o_user: store::read_user().ok(),
-            o_pic_input: None,
-            o_name_input: None,
-            o_bio_input: None,
-            o_email_input: None,
-            o_password_input: None,
+        let mut settings = Settings {
+            pic_input: Gizmo::from(TextInput::new("", "URL of profile picture")),
+            name_input: Gizmo::from(TextInput::new("", "Your name")),
+            bio_input: Gizmo::from(TextInput::new("", "Short bio about you")),
+            email_input: Gizmo::from(TextInput::new("", "Your email")),
+            password_input: Gizmo::from(TextInput::new("", "Your password")),
+            o_user: None,
+        };
+        if let Some(user) = store::read_user().ok() {
+            settings.set_user(user);
         }
+        settings
+    }
+}
+
+impl Settings {
+    fn set_user(&mut self, user: User) {
+        if let Some(image) = user.image.as_ref() {
+            self.pic_input.send(&TextInputIn::SetValue(image.to_string()));
+        }
+        if let Some(bio) = user.bio.as_ref() {
+            self.bio_input.send(&TextInputIn::SetValue(bio.to_string()));
+        }
+        self.name_input.send(&TextInputIn::SetValue(user.username.clone()));
+        self.email_input.send(&TextInputIn::SetValue(user.email.clone()));
+        self.o_user = Some(user);
     }
 }
 
 #[derive(Clone)]
 pub enum In {
-    ImageInput(HtmlInputElement),
-    UsernameInput(HtmlInputElement),
-    BioInput(HtmlTextAreaElement),
-    EmailInput(HtmlInputElement),
-    PasswordInput(HtmlInputElement),
+    GotUser(User),
     Submit,
     UpdateSuccess(User),
     UpdateFailure { errors: Vec<String> },
@@ -61,46 +76,37 @@ impl Component for Settings {
     type ViewMsg = Out;
     type DomNode = HtmlElement;
 
+    fn bind(&self, sub: &Subscriber<In>) {
+        if let Some(user) = self.o_user.as_ref() {
+            let user = user.clone();
+            sub.send_async(async move {
+                let user = api::get_user(&user.token)
+                    .await
+                    .unwrap_or_else(|e| panic!("could not get user: {}", e));
+                In::GotUser(user)
+            });
+        }
+    }
+
     fn update(&mut self, msg: &In, tx: &Transmitter<Out>, sub: &Subscriber<In>) {
         match msg {
-            In::ImageInput(i) => {
-                if let Some(url) = self.o_user.as_ref().map(|u| u.image.as_ref()).flatten() {
-                    i.set_value(url);
-                }
-                self.o_pic_input = Some(i.clone());
-            }
-            In::UsernameInput(i) => {
-                if let Some(username) = self.o_user.as_ref().map(|u| &u.username) {
-                    i.set_value(username);
-                }
-                self.o_name_input = Some(i.clone());
-            }
-            In::BioInput(a) => {
-                if let Some(bio) = self.o_user.as_ref().map(|u| u.bio.as_ref()).flatten() {
-                    a.set_value(bio);
-                }
-                self.o_bio_input = Some(a.clone());
-            }
-            In::EmailInput(i) => {
-                if let Some(email) = self.o_user.as_ref().map(|u| &u.email) {
-                    i.set_value(email);
-                }
-                self.o_email_input = Some(i.clone());
-            }
-            In::PasswordInput(i) => {
-                self.o_password_input = Some(i.clone());
+            In::GotUser(user) => {
+                self.set_user(user.clone());
+                let _ = store::write_user(user);
             }
             In::Submit => {
-                let email: Option<String> = self.o_email_input.as_ref().map(|i| i.value());
-                let username: Option<String> = self.o_name_input.as_ref().map(|i| i.value());
-                let bio: Option<String> = self.o_bio_input.as_ref().map(|i| i.value());
-                let image: Option<String> = self.o_pic_input.as_ref().map(|i| i.value());
-                let password: Option<String> = self
-                    .o_password_input
-                    .as_ref()
-                    .map(|i| i.value())
-                    .map(|s| if s.is_empty() { None } else { Some(s) })
-                    .flatten();
+                let email = Some(self.email_input.state.borrow().value.clone());
+                let username = Some(self.name_input.state.borrow().value.clone());
+                let bio = Some(self.bio_input.state.borrow().value.clone());
+                let image = Some(self.pic_input.state.borrow().value.clone());
+                let password = {
+                    let pass = self.password_input.state.borrow().value.clone();
+                    if pass.is_empty() {
+                        None
+                    } else {
+                        Some(pass)
+                    }
+                };
 
                 if let Some(user) = self.o_user.as_ref() {
                     let user_update = UserUpdate {
@@ -166,46 +172,19 @@ impl Component for Settings {
                             <form>
                                 <fieldset>
                                     <fieldset class="form-group">
-                                        <input
-                                            cast:type = HtmlInputElement
-                                            post:build = tx.contra_map(|i: &HtmlInputElement| In::ImageInput(i.clone()))
-                                            class="form-control"
-                                            type="text"
-                                            placeholder="URL of profile picture" />
+                                        {self.pic_input.view_builder()}
                                     </fieldset>
                                     <fieldset class="form-group">
-                                        <input
-                                            cast:type = HtmlInputElement
-                                            post:build = tx.contra_map(|i: &HtmlInputElement| In::UsernameInput(i.clone()))
-                                            class="form-control form-control-lg"
-                                            type="text"
-                                            placeholder="Your Name" />
+                                        {self.name_input.view_builder()}
                                     </fieldset>
                                     <fieldset class="form-group">
-                                        <textarea id="bio_input"
-                                            cast:type = HtmlTextAreaElement
-                                            post:build = tx.contra_map(|a: &HtmlTextAreaElement| In::BioInput(a.clone()))
-                                            class="form-control form-control-lg"
-                                            rows="8"
-                                            placeholder="Short bio about you"
-                                            >
-                                        </textarea>
+                                        {self.bio_input.view_builder()}
                                     </fieldset>
                                     <fieldset class="form-group">
-                                        <input id="email_input"
-                                            cast:type = HtmlInputElement
-                                            post:build = tx.contra_map(|i: &HtmlInputElement| In::EmailInput(i.clone()))
-                                            class="form-control form-control-lg"
-                                             type="text"
-                                             placeholder="Email" />
+                                        {self.email_input.view_builder()}
                                     </fieldset>
                                     <fieldset class="form-group">
-                                        <input id="password_input"
-                                            cast:type = HtmlInputElement
-                                            post:build = tx.contra_map(|i: &HtmlInputElement| In::PasswordInput(i.clone()))
-                                            class="form-control form-control-lg"
-                                            type="password"
-                                            placeholder="Password" />
+                                        {self.password_input.view_builder()}
                                     </fieldset>
                                     <button
                                         on:click=tx.contra_map(|_| In::Submit)
@@ -215,7 +194,9 @@ impl Component for Settings {
                                 </fieldset>
                             </form>
                             <hr />
-                            <button class="btn btn-outline-danger" on:click=tx.contra_map(|_| In::Logout)>
+                            <button
+                                class="btn btn-outline-danger"
+                                on:click=tx.contra_map(|_| In::Logout)>
                                 "Or click here to logout."
                             </button>
                         </div>

@@ -9,6 +9,7 @@ mod components;
 mod page;
 mod route;
 mod store;
+mod widgets;
 
 use components::{
     login::Login,

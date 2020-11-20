@@ -1,6 +1,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
+use log::trace;
 
 /// The conduit API URL
 pub const API_URL: &'static str = "https://conduit.productionready.io/api";
@@ -142,6 +144,14 @@ pub struct User {
     pub image: Option<String>,
 }
 
+/// GET /api/user
+pub async fn get_user(token: &str) -> Result<User, request::Error> {
+    let url = format!("{}/user", API_URL);
+    let UserWrapper { user } =
+        request::api::<(), _>(&url, "GET", None, Some(token)).await?;
+    Ok(user)
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct UserWrapper<T> {
     user: T,
@@ -211,7 +221,7 @@ pub async fn update_user(user: UserUpdate, token: &str) -> Result<User, request:
 #[derive(Clone, Deserialize)]
 pub struct UserProfile {
     pub username: String,
-    pub bio: String,
+    pub bio: Option<String>,
     pub image: String,
     pub following: bool,
 }
@@ -220,7 +230,7 @@ impl From<User> for UserProfile {
     fn from(user: User) -> UserProfile {
         UserProfile {
             username: user.username,
-            bio: user.bio.unwrap_or_else(|| String::new()),
+            bio: user.bio,
             image: user.image.unwrap_or_else(|| String::new()),
             following: false,
         }
@@ -269,33 +279,29 @@ pub struct Article {
     pub description: String,
     pub body: String,
     pub tag_list: Vec<String>,
-    //pub created_at: DateTime<Utc>,
-    //pub updated_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
     pub favorited: bool,
     pub favorites_count: u32,
     pub author: UserProfile,
-}
-
-#[cfg(test)]
-mod test_parse_date {
-    use chrono::{offset::FixedOffset, DateTime, Utc};
-
-    #[test]
-    fn parse_date_time() {
-        let s = "2016-02-18T03:48:35.824Z";
-        let dt: DateTime<FixedOffset> = todo!();
-    }
 }
 
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Articles {
     pub articles: Vec<Article>,
-    pub article_count: u32,
+    pub articles_count: u32,
 }
 
 /// GET /api/articles
-pub async fn get_articles(o_author: Option<&str>, o_tag: Option<&str>, o_favorited: Option<&str>, o_limit: Option<u32>, o_offset: Option<u32>, o_token: Option<&str>) -> Result<Articles, request::Error> {
+pub async fn get_articles(
+    o_author: Option<&str>,
+    o_tag: Option<&str>,
+    o_favorited: Option<&str>,
+    o_limit: Option<u32>,
+    o_offset: Option<u32>,
+    o_token: Option<&str>,
+) -> Result<Articles, request::Error> {
     let params: Vec<String> = vec![
         o_tag.map(|t| format!("tag={}", t)),
         o_author.map(|a| format!("author={}", a)),

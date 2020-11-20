@@ -1,7 +1,7 @@
 use mogwai::prelude::*;
 
 use crate::{
-    api::{self, Article, Articles, User, UserProfile},
+    api::{self, Article, Articles, UserProfile},
     store,
 };
 
@@ -30,7 +30,22 @@ fn article_builder(article: &Article) -> ViewBuilder<HtmlElement> {
 
 pub struct Profile {
     pub username: String,
+    pub profile: Option<UserProfile>,
     pub is_favorites: bool,
+    pub is_self: bool,
+}
+
+impl Profile {
+    pub fn new(username: String, is_favorites: bool) -> Self {
+        Profile {
+            profile: None,
+            is_self: store::read_user()
+                .map(|u| u.username == username)
+                .unwrap_or_else(|_| false),
+            username,
+            is_favorites,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -92,7 +107,7 @@ impl Component for Profile {
         &mut self,
         msg: &Self::ModelMsg,
         tx: &Transmitter<Self::ViewMsg>,
-        sub: &Subscriber<Self::ModelMsg>,
+        _sub: &Subscriber<Self::ModelMsg>,
     ) {
         match msg {
             In::Articles(articles) => {
@@ -104,6 +119,8 @@ impl Component for Profile {
                 }
             }
             In::Profile(user_profile) => {
+                self.is_self = user_profile.username == self.username;
+                self.profile = Some(user_profile.clone());
                 tx.send(&Out::Profile(user_profile.clone()));
             }
         }
@@ -111,7 +128,7 @@ impl Component for Profile {
 
     fn view(
         &self,
-        tx: &Transmitter<Self::ModelMsg>,
+        _tx: &Transmitter<Self::ModelMsg>,
         rx: &Receiver<Self::ViewMsg>,
     ) -> ViewBuilder<HtmlElement> {
         builder! {
@@ -121,20 +138,40 @@ impl Component for Profile {
                         <div class="row">
                             <div class="col-xs-12 col-md-10 offset-md-1">
                                 <img
-                                    src=rx.branch_filter_map(|msg| msg.user().map(|u| u.image))
+                                    src=(
+                                        self.profile.as_ref().map(|u| u.image.clone()).unwrap_or_else(|| "".to_string()),
+                                        rx.branch_filter_map(|msg| msg.user().map(|u| u.image))
+                                    )
                                     class="user-img" />
-                                <h4>{rx.branch_filter_map(|msg| msg.user().map(|u| u.username))}</h4>
+                                <h4>
+                                    {(&self.username, rx.branch_filter_map(|msg| msg.user().map(|u| u.username)))}
+                                </h4>
                                 <p>
-                                    "Some BS about some stuff."
+                                    {(
+                                        self.profile.as_ref().map(|u| u.bio.clone()).flatten().unwrap_or_else(|| "".to_string()),
+                                        rx.branch_filter_map(|msg| msg.user().map(|u| u.bio.unwrap_or_else(|| "".to_string())))
+                                    )}
                                 </p>
-                                <button class="btn btn-sm btn-outline-secondary action-btn">
-                                    <i class="ion-plus-round"></i>
-                                    {
-                                        rx.branch_filter_map(|msg| {
-                                            msg.user().map(|u| format!(" Follow {}", u.username))
-                                        })
+                                {if self.is_self {
+                                    builder! {
+                                        <a class="btn btn-sm btn-outline-secondary action-btn" href="#/settings">
+                                            <i class="ion-gear-a"></i>
+                                            " Edit Profile Settings"
+                                        </a>
                                     }
-                                </button>
+                                } else {
+                                    builder! {
+                                        <button class="btn btn-sm btn-outline-secondary action-btn">
+                                            <i class="ion-plus-round"></i>
+                                            {(
+                                                format!(" Follow {}", self.username),
+                                                rx.branch_filter_map(|msg| {
+                                                    msg.user().map(|u| format!(" Follow {}", u.username))
+                                                })
+                                            )}
+                                        </button>
+                                    }
+                                }}
                             </div>
                         </div>
                     </div>

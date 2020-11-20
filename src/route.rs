@@ -88,10 +88,7 @@ impl From<&Route> for ViewBuilder<HtmlElement> {
             Route::Profile {
                 username,
                 is_favorites,
-            } => Gizmo::from(Profile {
-                username: username.to_string(),
-                is_favorites: *is_favorites,
-            }).view_builder(),
+            } => Gizmo::from(Profile::new(username.to_string(), *is_favorites)).view_builder(),
         }
     }
 }
